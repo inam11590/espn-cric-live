@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.app.core.config import settings
 from backend.app.core.database import SessionLocal, init_db
 from backend.app.core.websocket_manager import ws_manager
-from backend.app.routers import health, matches
+from backend.app.routers import health, matches, stream_proxy
 from backend.app.services.background_worker import score_scheduler
 from backend.app.services.cricket_service import cricket_service
 
@@ -71,6 +71,7 @@ app.add_middleware(
 # Include v1 routers
 app.include_router(health.router, prefix=settings.API_V1_STR)
 app.include_router(matches.router, prefix=settings.API_V1_STR)
+app.include_router(stream_proxy.router, prefix=settings.API_V1_STR)
 
 
 # -----------------------------------------------------------------------------
@@ -111,6 +112,10 @@ async def ws_match_stream_endpoint(
 
 
 # Mount static assets & frontend dashboard
+frontend_dist = settings.BASE_DIR / "frontend" / "dist"
+if (frontend_dist / "assets").exists():
+    app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
+
 static_path = settings.STATIC_DIR
 if static_path.exists():
     app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
@@ -118,7 +123,10 @@ if static_path.exists():
 
 @app.get("/", include_in_schema=False)
 async def serve_index():
-    index_file = static_path / "index.html"
-    if index_file.exists():
-        return FileResponse(str(index_file))
+    react_index = frontend_dist / "index.html"
+    if react_index.exists():
+        return FileResponse(str(react_index))
+    static_index = static_path / "index.html"
+    if static_index.exists():
+        return FileResponse(str(static_index))
     return JSONResponse({"status": "healthy", "docs": "/docs"})

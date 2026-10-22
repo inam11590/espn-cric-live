@@ -61,6 +61,13 @@ def init_db():
                             "is_active": True,
                         },
                         {
+                            "server_name": "CORS Proxy HLS (Bypass)",
+                            "stream_type": "proxy_hls",
+                            "stream_url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+                            "quality": "1080p",
+                            "is_active": True,
+                        },
+                        {
                             "server_name": "Backup Stream (720p)",
                             "stream_type": "hls",
                             "stream_url": "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",

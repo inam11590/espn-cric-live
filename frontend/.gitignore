@@ -1,0 +1,11 @@
+# Node dependencies
+node_modules/
+.npm/
+
+# Vite build cache
+.vite/
+dist-ssr/
+
+# Editor
+.DS_Store
+*.local
