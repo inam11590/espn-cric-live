@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CricStream Live - Live Cricket Streaming & Scores</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <script src="/static/js/hls.min.js"></script>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-section">
+        <div class="brand-logo">🏏</div>
+        <div class="brand-name">CRIC<span>STREAM</span> LIVE</div>
+        <div class="live-pill">
+          <span class="pulse-dot"></span> BROADCAST
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <div id="cacheStatusPill" class="cache-pill">
+          ⚡ Cache: <span>INIT</span>
+        </div>
+        <div class="refresh-indicator">
+          <div class="refresh-timer-bar">
+            <div id="refreshTimerFill" class="refresh-timer-fill"></div>
+          </div>
+          <span>Auto-Sync</span>
+        </div>
+        <button id="refreshBtn" class="btn">&#8635; Refresh</button>
+        <a href="/docs" target="_blank" class="btn btn-sm">API Docs ↗</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Wrapper -->
+  <main class="main-wrapper">
+
+    <!-- Top Live Score Banner -->
+    <section class="banner-section">
+      <div class="section-header">
+        <div class="section-title">
+          <span>🏏 Live Matches & Recent Fixtures</span>
+        </div>
+        <div class="section-subtitle">Real-time scorecards scraped via Playwright WebKit & Summary()</div>
+      </div>
+
+      <div id="scoreTicker" class="ticker-container">
+        <div class="empty-state">
+          <span class="spinner"></span>
+          <p style="margin-top:10px">Connecting to Cricinfo live feeds...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dashboard Split View -->
+    <div class="dashboard-grid">
+
+      <!-- Left Column: Modular Video Stream Player -->
+      <section class="stream-panel">
+        <div class="section-title">
+          <span>📺 Live Streaming Broadcast</span>
+        </div>
+
+        <div class="video-container">
+          <div id="streamTypeBadge" class="video-overlay-badge">HLS LIVE</div>
+          <video id="videoPlayer" controls playsinline poster="https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=1200&auto=format&fit=crop"></video>
+          <iframe id="iframePlayer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        </div>
+
+        <div class="stream-controls-bar">
+          <div class="feed-tabs">
+            <button class="feed-tab active" onclick="switchPresetFeed(0)">Main Feed (1080p)</button>
+            <button class="feed-tab" onclick="switchPresetFeed(1)">Spider Cam</button>
+            <button class="feed-tab" onclick="switchPresetFeed(2)">Stump Cam</button>
+            <button class="feed-tab" onclick="switchPresetFeed(3)">World Feed (Embed)</button>
+          </div>
+        </div>
+
+        <!-- Custom Stream Input -->
+        <div class="custom-stream-row">
+          <input type="text" id="customStreamInput" class="custom-stream-input" placeholder="Paste custom HLS (.m3u8) or iframe stream URL..." value="https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8">
+          <button class="btn btn-primary" onclick="loadCustomStream()">Load Stream</button>
+        </div>
+
+        <!-- Active Stream Metadata -->
+        <div class="stream-meta">
+          <div>
+            <div id="streamMatchTitle" class="stream-meta-title">Live Cricket Stream</div>
+            <div id="streamMatchVenue" class="stream-meta-venue">Select a match from the banner above to switch streams</div>
+          </div>
+          <span class="status-badge live"><span class="pulse-dot"></span> ON AIR</span>
+        </div>
+      </section>
+
+      <!-- Right Column: Active Match Center -->
+      <section class="match-center-panel">
+        <div class="center-header">
+          <div class="center-title">⚡ Match Center</div>
+          <select id="matchSelectDropdown" class="match-selector-select">
+            <option>Loading fixtures...</option>
+          </select>
+        </div>
+
+        <!-- Current Match Mini Scoreboard -->
+        <div id="activeScoreboardContainer" class="active-scoreboard">
+          <div class="empty-state">Loading active match...</div>
+        </div>
+
+        <!-- Live Snapshot Box: On-Strike & Bowler -->
+        <div class="live-snapshot-box">
+          <div class="snapshot-title">Broadcast Quick Info</div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>Engine</th>
+                <th>Specification</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Data Scraper</td>
+                <td>Playwright WebKit</td>
+                <td>Akamai stealth headless extraction</td>
+              </tr>
+              <tr>
+                <td>Live Cache TTL</td>
+                <td>In-Memory Cache</td>
+                <td>20 Seconds</td>
+              </tr>
+              <tr>
+                <td>Scorecard Cache</td>
+                <td>In-Memory Cache</td>
+                <td>24 Hours (86400s)</td>
+              </tr>
+              <tr>
+                <td>Streaming Feeds</td>
+                <td>HLS & Embeds</td>
+                <td>Adaptive bitrate .m3u8 / iframes</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </section>
+    </div>
+
+  </main>
+
+  <!-- Detailed Match Modal (Batting & Bowling Scorecards + Lineups) -->
+  <div id="matchDetailModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div id="modalMatchTitle" class="modal-title">Match Full Scorecard</div>
+        <button class="modal-close-btn" onclick="closeModal('matchDetailModal')">&times;</button>
+      </div>
+
+      <!-- Innings Switcher -->
+      <div id="inningsToggleBar" class="modal-tabs" style="background:var(--bg-secondary); padding:8px 16px;"></div>
+
+      <div class="modal-tabs">
+        <button class="modal-tab-btn active" data-tab="batting" onclick="switchModalTab('batting')">Batting Scorecard</button>
+        <button class="modal-tab-btn" data-tab="bowling" onclick="switchModalTab('bowling')">Bowling Figures</button>
+        <button class="modal-tab-btn" data-tab="matchInfo" onclick="switchModalTab('matchInfo')">Match Info & Playing XI</button>
+      </div>
+
+      <div id="matchDetailBody" class="modal-body">
+        <!-- Batting Pane -->
+        <div id="battingTabPane" class="tab-pane active">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Batter</th>
+                <th>Dismissal</th>
+                <th>R</th>
+                <th>B</th>
+                <th>4s</th>
+                <th>6s</th>
+                <th>SR</th>
+              </tr>
+            </thead>
+            <tbody id="battingTableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Bowling Pane -->
+        <div id="bowlingTabPane" class="tab-pane">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Bowler</th>
+                <th>O</th>
+                <th>M</th>
+                <th>R</th>
+                <th>W</th>
+                <th>Econ</th>
+                <th>Dots</th>
+                <th>Wd/Nb</th>
+              </tr>
+            </thead>
+            <tbody id="bowlingTableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Match Info & Playing XI Pane -->
+        <div id="matchInfoTabPane" class="tab-pane"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Player Profile Modal -->
+  <div id="playerProfileModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:750px;">
+      <div class="modal-header">
+        <div class="modal-title">Player Career Profile</div>
+        <button class="modal-close-btn" onclick="closeModal('playerProfileModal')">&times;</button>
+      </div>
+      <div id="playerProfileBody" class="modal-body">
+        <!-- Populated via loadPlayerProfile() -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div>Live Cricket Streaming & Live Score App • Powered by <strong>outside-edge/python-espncricinfo</strong> with Playwright (WebKit)</div>
+    <div style="margin-top:4px;">In-Memory Guardrail Caching • Fast & Resilient Scraping</div>
+  </footer>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
