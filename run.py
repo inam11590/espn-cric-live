@@ -1,7 +1,8 @@
 import uvicorn
-from app import config
+from backend.app.core.config import settings
 
 if __name__ == "__main__":
-    print(f"Starting Cricket Live Streaming & Score Service on http://{config.HOST}:{config.PORT}")
-    print(f"Interactive API Docs available at http://localhost:{config.PORT}/docs")
-    uvicorn.run("app.main:app", host=config.HOST, port=config.PORT, reload=config.DEBUG)
+    print(f"Starting {settings.PROJECT_NAME} v{settings.VERSION} on http://{settings.HOST}:{settings.PORT}")
+    print(f"API v1 endpoints: http://{settings.HOST}:{settings.PORT}{settings.API_V1_STR}")
+    print(f"Interactive Swagger Docs: http://localhost:{settings.PORT}/docs")
+    uvicorn.run("backend.app.main:app", host=settings.HOST, port=settings.PORT, reload=settings.DEBUG)

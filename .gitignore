@@ -13,6 +13,10 @@ __pycache__/
 .coverage
 htmlcov/
 
+# Database
+*.db
+*.sqlite3
+
 # Playwright
 .playwright/
 
