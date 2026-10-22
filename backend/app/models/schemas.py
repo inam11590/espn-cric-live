@@ -182,6 +182,27 @@ class MatchDetailSchema(BaseModel):
 
 
 # -----------------------------------------------------------------------------
+# Player Schemas
+# -----------------------------------------------------------------------------
+
+class PlayerProfileSchema(BaseModel):
+    player_id: int
+    name: str = ""
+    full_name: str = ""
+    first_name: str = ""
+    date_of_birth: Optional[str] = None
+    current_age: Optional[str] = None
+    playing_role: Optional[str] = None
+    batting_style: Optional[str] = None
+    bowling_style: Optional[str] = None
+    major_teams: List[str] = []
+    career_summary: Optional[Dict[str, Any]] = None
+    career_averages: Optional[Dict[str, Any]] = None
+    headshot_url: Optional[str] = None
+    cached: bool = True
+
+
+# -----------------------------------------------------------------------------
 # System & Health Schemas
 # -----------------------------------------------------------------------------
 

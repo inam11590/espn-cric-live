@@ -115,3 +115,16 @@ def test_websocket_realtime_connection():
         websocket.send_text("ping")
         reply = websocket.receive_text()
         assert reply == "pong"
+
+
+def test_v1_get_player_profile():
+    # Test player profile fetch for Smriti Mandhana (id 597806) or Virat Kohli (253802)
+    response = client.get("/api/v1/players/597806")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["player_id"] == 597806
+    assert "Mandhana" in data["full_name"] or "Mandhana" in data["name"]
+    assert "batting_style" in data
+    assert "playing_role" in data
+    assert data["cached"] is True
+

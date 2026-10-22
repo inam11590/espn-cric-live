@@ -131,3 +131,21 @@ export interface MatchDetail {
   cached?: boolean;
   streams: StreamServer[];
 }
+
+export interface PlayerProfile {
+  player_id: number;
+  name: string;
+  full_name: string;
+  first_name?: string;
+  date_of_birth?: string | null;
+  current_age?: string | null;
+  playing_role?: string | null;
+  batting_style?: string | null;
+  bowling_style?: string | null;
+  major_teams?: string[];
+  career_summary?: Record<string, any> | null;
+  career_averages?: Record<string, any> | null;
+  headshot_url?: string | null;
+  cached?: boolean;
+}
+

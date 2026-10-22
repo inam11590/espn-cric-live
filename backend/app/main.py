@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.app.core.config import settings
 from backend.app.core.database import SessionLocal, init_db
 from backend.app.core.websocket_manager import ws_manager
-from backend.app.routers import health, matches, stream_proxy
+from backend.app.routers import health, matches, players, stream_proxy
 from backend.app.services.background_worker import score_scheduler
 from backend.app.services.cricket_service import cricket_service
 
@@ -71,6 +71,7 @@ app.add_middleware(
 # Include v1 routers
 app.include_router(health.router, prefix=settings.API_V1_STR)
 app.include_router(matches.router, prefix=settings.API_V1_STR)
+app.include_router(players.router, prefix=settings.API_V1_STR)
 app.include_router(stream_proxy.router, prefix=settings.API_V1_STR)
 
 
