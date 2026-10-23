@@ -36,4 +36,10 @@ frontend/.vite/
 # Scraper CSV artifacts
 *.csv
 
+# Secrets & Environment Files
+.env
+.env.production
+.env.local
+
+
 

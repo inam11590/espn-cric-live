@@ -1,0 +1,56 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: cricstream_backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=sqlite:////app/data/cricket.db
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-cricstream-jwt-secret-key-production-2026-secure}
+      - SCRAPE_INTERVAL_SECONDS=20
+      - SCRAPE_TIMEOUT_SECONDS=25
+    volumes:
+      - cricket_data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - cricstream_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cricstream_frontend
+    restart: unless-stopped
+    networks:
+      - cricstream_net
+
+  nginx:
+    image: nginx:alpine
+    container_name: cricstream_gateway
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+    networks:
+      - cricstream_net
+
+volumes:
+  cricket_data:
+
+networks:
+  cricstream_net:
+    driver: bridge

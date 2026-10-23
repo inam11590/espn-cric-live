@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -11,6 +12,13 @@ logger = logging.getLogger("cricket_app.database")
 connect_args = {}
 if settings.DATABASE_URL.startswith("sqlite"):
     connect_args["check_same_thread"] = False
+    # Ensure database parent directory exists (e.g. /app/data)
+    try:
+        db_path = settings.DATABASE_URL.split("sqlite:///")[-1]
+        if db_path and not db_path.startswith(":memory:"):
+            Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
 
 engine = create_engine(
     settings.DATABASE_URL,
