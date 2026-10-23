@@ -13,9 +13,14 @@ import {
   ExternalLink,
   RefreshCw,
   Trophy,
+  MessageSquare,
 } from 'lucide-react';
 import { MatchDetail, MatchSummary, BattingEntry, BowlingEntry } from '../types/cricket';
 import { LiveStreamPlayer } from '../components/LiveStreamPlayer';
+import { useChatSocket } from '../hooks/useChatSocket';
+import { ReactionOverlay } from '../components/chat/ReactionOverlay';
+import { LiveChatPanel } from '../components/chat/LiveChatPanel';
+import { MatchPollWidget } from '../components/chat/MatchPollWidget';
 
 interface MatchCenterProps {
   matchDetail: MatchDetail | null;
@@ -38,8 +43,25 @@ export const MatchCenter: React.FC<MatchCenterProps> = ({
   matchesWithStreams,
   onSwitchMatch,
 }) => {
-  const [activeTab, setActiveTab] = useState<'live' | 'scorecard' | 'info'>('live');
+  const [activeTab, setActiveTab] = useState<'live' | 'scorecard' | 'info' | 'chat'>('live');
   const [expandedInnings, setExpandedInnings] = useState<number[]>([1, 2]);
+
+  // Real-time Chat, Flying Reactions & Match Polls
+  const {
+    identity,
+    setNickname,
+    messages,
+    viewerCount,
+    reactions,
+    polls,
+    rateLimitSeconds,
+    sendMessage,
+    sendReaction,
+    votePoll,
+  } = useChatSocket(
+    matchDetail?.series_id ?? null,
+    matchDetail?.match_id ?? null
+  );
 
   const toggleInnings = (innNum: number) => {
     if (expandedInnings.includes(innNum)) {
@@ -270,6 +292,14 @@ export const MatchCenter: React.FC<MatchCenterProps> = ({
             </div>
           )}
 
+          {/* Real-Time Flying Emoji Reactions Dock */}
+          <div className="mt-3">
+            <ReactionOverlay
+              reactions={reactions}
+              onSendReaction={sendReaction}
+            />
+          </div>
+
           {/* Quick Match Note Below Video */}
           <div className="mt-3 p-3 rounded-xl bg-slate-900/70 border border-slate-800/70 text-xs flex flex-col sm:flex-row items-center justify-between gap-2">
             <div className="flex items-center gap-2">
@@ -325,9 +355,42 @@ export const MatchCenter: React.FC<MatchCenterProps> = ({
             >
               Info & Squads
             </button>
+
+            <button
+              onClick={() => setActiveTab('chat')}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                activeTab === 'chat'
+                  ? 'bg-slate-800 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850/50'
+              }`}
+            >
+              <MessageSquare className={`w-3.5 h-3.5 ${activeTab === 'chat' ? 'text-emerald-400' : ''}`} />
+              <span>Live Chat</span>
+              {viewerCount > 0 && (
+                <span className="text-[10px] font-mono px-1 rounded-full bg-emerald-500/20 text-emerald-300">
+                  {viewerCount}
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Tab Content Area */}
+          {activeTab === 'chat' ? (
+            <div className="h-[680px]">
+              <LiveChatPanel
+                messages={messages}
+                viewerCount={viewerCount}
+                nickname={identity.nickname}
+                avatarColor={identity.color}
+                rateLimitSeconds={rateLimitSeconds}
+                polls={polls}
+                onSendMessage={sendMessage}
+                onSetNickname={setNickname}
+                onVotePoll={votePoll}
+                className="h-full border-none rounded-none shadow-none"
+              />
+            </div>
+          ) : (
           <div className="p-4 overflow-y-auto max-h-[680px] space-y-4 text-xs text-slate-300">
             {/* ------------------------------------------------------------ */}
             {/* TAB 1: LIVE BATTERS, BOWLER & PARTNERSHIP                    */}
@@ -469,6 +532,13 @@ export const MatchCenter: React.FC<MatchCenterProps> = ({
                     ))}
                   </div>
                 </div>
+
+                {/* Live Match Prediction Polls */}
+                {polls.length > 0 && (
+                  <div className="pt-2">
+                    <MatchPollWidget polls={polls} onVote={votePoll} />
+                  </div>
+                )}
               </div>
             )}
 
@@ -692,6 +762,7 @@ export const MatchCenter: React.FC<MatchCenterProps> = ({
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
     </div>

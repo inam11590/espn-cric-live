@@ -149,3 +149,41 @@ export interface PlayerProfile {
   cached?: boolean;
 }
 
+export interface ChatMessage {
+  id: string;
+  user_id: string;
+  username: string;
+  avatar_color?: string;
+  message: string;
+  timestamp: string;
+  badge?: string;
+}
+
+export interface PollOption {
+  id: string;
+  text: string;
+  votes: number;
+  percentage: number;
+}
+
+export interface Poll {
+  id: number;
+  match_id: number;
+  series_id?: number;
+  question: string;
+  options: PollOption[];
+  total_votes: number;
+  is_active: boolean;
+  created_at?: string;
+  user_voted_option_id?: string | null;
+}
+
+export interface FlyingReaction {
+  id: string;
+  emoji: string;
+  sender?: string;
+  x?: number;
+  timestamp?: string;
+}
+
+

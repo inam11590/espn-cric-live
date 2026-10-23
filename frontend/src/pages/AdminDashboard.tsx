@@ -19,9 +19,11 @@ import {
   AlertTriangle,
   Globe,
   Sliders,
+  Sparkles,
+  PieChart,
 } from 'lucide-react';
 import { LiveStreamPlayer } from '../components/LiveStreamPlayer';
-import { StreamServer, StreamType } from '../types/cricket';
+import { StreamServer, StreamType, Poll } from '../types/cricket';
 
 interface AdminMatch {
   match_id: number;
@@ -81,6 +83,12 @@ export const AdminDashboard: React.FC = () => {
   const [customSeriesId, setCustomSeriesId] = useState(Math.floor(100000 + Math.random() * 900000));
   const [customStatus, setCustomStatus] = useState('LIVE');
 
+  // Match Prediction Polls state
+  const [polls, setPolls] = useState<Poll[]>([]);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState<string[]>(['India', 'Australia']);
+  const [isCreatingPoll, setIsCreatingPoll] = useState(false);
+
   // Verify auth on mount
   useEffect(() => {
     if (!token) {
@@ -139,6 +147,76 @@ export const AdminDashboard: React.FC = () => {
         m.series_name.toLowerCase().includes(q)
     );
   }, [matches, searchQuery]);
+
+  // Fetch prediction polls for selected match
+  const fetchMatchPolls = async (matchId: number) => {
+    try {
+      const res = await fetch(`/api/v1/matches/${matchId}/polls`);
+      if (res.ok) {
+        const data = await res.json();
+        setPolls(data);
+      }
+    } catch (e) {
+      // non-fatal
+    }
+  };
+
+  useEffect(() => {
+    if (selectedMatch) {
+      fetchMatchPolls(selectedMatch.match_id);
+    }
+  }, [selectedMatch?.match_id]);
+
+  const handleCreatePoll = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedMatch || !pollQuestion.trim()) return;
+    const validOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
+    if (validOptions.length < 2) {
+      alert('Please provide at least 2 options.');
+      return;
+    }
+    setIsCreatingPoll(true);
+    try {
+      const res = await fetch(`/api/v1/admin/matches/${selectedMatch.match_id}/polls`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          question: pollQuestion.trim(),
+          options: validOptions,
+          series_id: selectedMatch.series_id,
+        }),
+      });
+      if (res.ok) {
+        setPollQuestion('');
+        setPollOptions(['India', 'Australia']);
+        fetchMatchPolls(selectedMatch.match_id);
+      } else {
+        const err = await res.json();
+        alert(err.detail || 'Failed to create poll');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error creating poll');
+    } finally {
+      setIsCreatingPoll(false);
+    }
+  };
+
+  const handleTogglePoll = async (pollId: number) => {
+    try {
+      const res = await fetch(`/api/v1/admin/polls/${pollId}/toggle`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok && selectedMatch) {
+        fetchMatchPolls(selectedMatch.match_id);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // Toggle stream server active status
   const toggleStreamActive = async (streamId: number, currentActive: boolean) => {
@@ -814,6 +892,166 @@ export const AdminDashboard: React.FC = () => {
                     >
                       <Plus className="w-4 h-4" />
                       <span>Save & Broadcast Stream</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* ---------------------------------------------------------- */}
+              {/* Live Match Prediction Polls Management                     */}
+              {/* ---------------------------------------------------------- */}
+              <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <PieChart className="w-4 h-4 text-emerald-400" />
+                    <h3 className="text-sm font-bold text-white">
+                      Live Prediction Polls & Fan Engagement
+                    </h3>
+                  </div>
+                  <span className="text-xs text-slate-400 font-mono">
+                    {polls.length} poll(s) active/recent
+                  </span>
+                </div>
+
+                {/* Polls List */}
+                {polls.length > 0 ? (
+                  <div className="space-y-3">
+                    {polls.map((p) => (
+                      <div
+                        key={p.id}
+                        className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            {p.is_active ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                ACTIVE
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
+                                CLOSED
+                              </span>
+                            )}
+                            <span className="text-xs text-slate-400 font-mono">
+                              Total votes: {p.total_votes}
+                            </span>
+                          </div>
+                          <h4 className="text-sm font-bold text-slate-200">{p.question}</h4>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {p.options.map((opt) => (
+                              <div
+                                key={opt.id}
+                                className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-xs flex items-center gap-2"
+                              >
+                                <span className="text-slate-300">{opt.text}</span>
+                                <span className="text-emerald-400 font-bold font-mono">
+                                  {opt.percentage.toFixed(1)}% ({opt.votes})
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePoll(p.id)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition border ${
+                              p.is_active
+                                ? 'bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20'
+                                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20'
+                            }`}
+                          >
+                            {p.is_active ? 'Close Poll' : 'Reactivate Poll'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-6 text-center bg-slate-950/40 border border-slate-800/80 rounded-xl text-slate-400 text-xs">
+                    <PieChart className="w-7 h-7 text-slate-600 mx-auto mb-1.5" />
+                    <p className="font-semibold text-slate-300">No prediction polls for this match</p>
+                    <p className="text-[11px] text-slate-500">
+                      Create a question below to engage live viewers.
+                    </p>
+                  </div>
+                )}
+
+                {/* Create Poll Form */}
+                <form
+                  onSubmit={handleCreatePoll}
+                  className="pt-4 border-t border-slate-800 space-y-3"
+                >
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-300">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Launch New Prediction Poll</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                      Poll Question
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Who will win today's match? / Next over runs > 10?"
+                      value={pollQuestion}
+                      onChange={(e) => setPollQuestion(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {pollOptions.map((opt, idx) => (
+                      <div key={idx}>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                          Option {idx + 1}
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={opt}
+                          onChange={(e) => {
+                            const newOpts = [...pollOptions];
+                            newOpts[idx] = e.target.value;
+                            setPollOptions(newOpts);
+                          }}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <div className="flex items-center gap-2">
+                      {pollOptions.length < 4 && (
+                        <button
+                          type="button"
+                          onClick={() => setPollOptions([...pollOptions, ''])}
+                          className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300"
+                        >
+                          + Add Option
+                        </button>
+                      )}
+                      {pollOptions.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => setPollOptions(pollOptions.slice(0, -1))}
+                          className="text-[11px] font-semibold text-slate-400 hover:text-rose-400"
+                        >
+                          - Remove Option
+                        </button>
+                      )}
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isCreatingPoll || !pollQuestion.trim()}
+                      className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>{isCreatingPoll ? 'Launching...' : 'Broadcast Poll to Viewers'}</span>
                     </button>
                   </div>
                 </form>

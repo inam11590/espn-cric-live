@@ -44,6 +44,7 @@ def get_db():
 def init_db():
     """Initialize database tables and seed sample streams if empty."""
     from backend.app.models.match_stream import MatchStream, StreamServer
+    from backend.app.models.poll import MatchPoll, PollVote
 
     Base.metadata.create_all(bind=engine)
 
@@ -165,6 +166,44 @@ def init_db():
                 db.add(ms)
             db.commit()
             logger.info("Default match streams successfully seeded.")
+
+        # Seed sample polls if empty
+        poll_count = db.query(MatchPoll).count()
+        if poll_count == 0:
+            logger.info("Seeding default prediction polls...")
+            sample_polls = [
+                MatchPoll(
+                    match_id=1478914,
+                    series_id=1478874,
+                    question="Who will win today's high-stakes thriller?",
+                    options=[{"id": "opt_1", "text": "India Women"}, {"id": "opt_2", "text": "Australia Women"}],
+                    votes={"opt_1": 42, "opt_2": 38},
+                    total_votes=80,
+                    is_active=True,
+                ),
+                MatchPoll(
+                    match_id=1478914,
+                    series_id=1478874,
+                    question="Will next 5 overs produce a wicket?",
+                    options=[{"id": "opt_1", "text": "Yes, Breakthrough!"}, {"id": "opt_2", "text": "No, Batters Dominate"}],
+                    votes={"opt_1": 29, "opt_2": 21},
+                    total_votes=50,
+                    is_active=True,
+                ),
+                MatchPoll(
+                    match_id=1472235,
+                    series_id=1472210,
+                    question="Match Winner Prediction?",
+                    options=[{"id": "opt_1", "text": "Pakistan"}, {"id": "opt_2", "text": "South Africa"}],
+                    votes={"opt_1": 15, "opt_2": 19},
+                    total_votes=34,
+                    is_active=True,
+                ),
+            ]
+            for p in sample_polls:
+                db.add(p)
+            db.commit()
+            logger.info("Default prediction polls seeded.")
     except Exception as e:
         logger.error(f"Error during init_db: {e}")
         db.rollback()

@@ -277,3 +277,53 @@ class HealthResponse(BaseModel):
     background_scheduler: str = "running"
     cached_matches_count: int = 0
     last_scheduler_run: Optional[str] = None
+
+
+# -----------------------------------------------------------------------------
+# Live Chat & Prediction Poll Schemas
+# -----------------------------------------------------------------------------
+
+class PollOptionInput(BaseModel):
+    id: Optional[str] = None
+    text: str
+
+
+class PollCreateRequest(BaseModel):
+    question: str
+    options: List[str]  # e.g. ["India", "Australia"] or strings
+    series_id: Optional[int] = None
+
+
+class PollVoteRequest(BaseModel):
+    option_id: str
+    session_id: str
+
+
+class PollOptionResult(BaseModel):
+    id: str
+    text: str
+    votes: int = 0
+    percentage: float = 0.0
+
+
+class PollDetailResponse(BaseModel):
+    id: int
+    match_id: int
+    series_id: Optional[int] = None
+    question: str
+    options: List[PollOptionResult]
+    total_votes: int = 0
+    is_active: bool = True
+    created_at: Optional[str] = None
+    user_voted_option_id: Optional[str] = None
+
+
+class ChatMessagePayload(BaseModel):
+    id: str
+    user_id: str
+    username: str
+    avatar_color: Optional[str] = None
+    message: str
+    timestamp: str
+    badge: Optional[str] = None
+

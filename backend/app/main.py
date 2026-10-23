@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+import json
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,8 +13,9 @@ from fastapi.staticfiles import StaticFiles
 from backend.app.core.config import settings
 from backend.app.core.database import SessionLocal, init_db
 from backend.app.core.websocket_manager import ws_manager
-from backend.app.routers import admin, health, matches, players, stream_proxy
+from backend.app.routers import admin, health, matches, players, polls, stream_proxy
 from backend.app.services.background_worker import score_scheduler
+from backend.app.services.chat_manager import chat_manager
 from backend.app.services.cricket_service import cricket_service
 
 logging.basicConfig(
@@ -70,6 +72,7 @@ app.add_middleware(
 
 # Include v1 routers
 app.include_router(health.router, prefix=settings.API_V1_STR)
+app.include_router(polls.router, prefix=settings.API_V1_STR)
 app.include_router(matches.router, prefix=settings.API_V1_STR)
 app.include_router(players.router, prefix=settings.API_V1_STR)
 app.include_router(stream_proxy.router, prefix=settings.API_V1_STR)
@@ -111,6 +114,43 @@ async def ws_match_stream_endpoint(
         ws_manager.disconnect_match(websocket, series_id, match_id)
     finally:
         db.close()
+
+
+# -----------------------------------------------------------------------------
+# WebSocket: /ws/chat/{series_id}/{match_id}
+# -----------------------------------------------------------------------------
+
+@app.websocket("/ws/chat/{series_id}/{match_id}")
+async def ws_chat_room_endpoint(
+    websocket: WebSocket,
+    series_id: int,
+    match_id: int,
+):
+    """
+    WebSocket endpoint for real-time live match chat, flying emoji reactions,
+    active viewer counts, and prediction poll broadcasts.
+    """
+    room_id = chat_manager.get_room_id(series_id, match_id)
+    client_host = websocket.client.host if websocket.client else "unknown"
+    client_id = f"{client_host}:{id(websocket)}"
+
+    await chat_manager.connect(websocket, room_id)
+    try:
+        while True:
+            text = await websocket.receive_text()
+            try:
+                data = json.loads(text)
+            except (json.JSONDecodeError, TypeError):
+                continue
+
+            effective_client_id = str(data.get("user_id") or client_id)
+            await chat_manager.handle_incoming(room_id, effective_client_id, data, websocket)
+    except WebSocketDisconnect:
+        await chat_manager.disconnect(websocket, room_id)
+    except Exception as e:
+        logger.debug(f"WS chat exception in room {room_id}: {e}")
+        await chat_manager.disconnect(websocket, room_id)
+
 
 
 # Mount static assets & frontend dashboard
