@@ -33,6 +33,13 @@ class Settings(BaseModel):
     PORT: int = int(os.getenv("PORT", "8000"))
     DEBUG: bool = os.getenv("DEBUG", "false").lower() in ("true", "1", "t")
 
+    # Admin Authentication & Security
+    ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "admin")
+    ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "admin123")
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "cricstream-jwt-secret-key-production-2026-secure")
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
+
     model_config = {"arbitrary_types_allowed": True}
 
 

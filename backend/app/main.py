@@ -4,7 +4,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.app.core.config import settings
 from backend.app.core.database import SessionLocal, init_db
 from backend.app.core.websocket_manager import ws_manager
-from backend.app.routers import health, matches, players, stream_proxy
+from backend.app.routers import admin, health, matches, players, stream_proxy
 from backend.app.services.background_worker import score_scheduler
 from backend.app.services.cricket_service import cricket_service
 
@@ -73,6 +73,7 @@ app.include_router(health.router, prefix=settings.API_V1_STR)
 app.include_router(matches.router, prefix=settings.API_V1_STR)
 app.include_router(players.router, prefix=settings.API_V1_STR)
 app.include_router(stream_proxy.router, prefix=settings.API_V1_STR)
+app.include_router(admin.router, prefix=settings.API_V1_STR)
 
 
 # -----------------------------------------------------------------------------
@@ -123,7 +124,10 @@ if static_path.exists():
 
 
 @app.get("/", include_in_schema=False)
-async def serve_index():
+@app.get("/{full_path:path}", include_in_schema=False)
+async def serve_index(full_path: str = ""):
+    if full_path.startswith(("api/", "docs", "openapi.json", "ws/")):
+        raise HTTPException(status_code=404, detail="Not Found")
     react_index = frontend_dist / "index.html"
     if react_index.exists():
         return FileResponse(str(react_index))

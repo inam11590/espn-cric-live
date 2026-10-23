@@ -110,6 +110,8 @@ export function useMatchSocket(seriesId: number | null, matchId: number | null):
             handleNewMatchData(payload.data);
           } else if (payload.event === 'score_update' && payload.match) {
             handleNewMatchData(payload.match);
+          } else if (payload.event === 'STREAM_UPDATED' && Array.isArray(payload.streams)) {
+            setMatchDetail((prev) => (prev ? { ...prev, streams: payload.streams } : null));
           }
         } catch (e) {
           // If plain text (e.g., pong)

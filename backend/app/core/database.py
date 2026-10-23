@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from backend.app.core.config import settings
@@ -38,6 +38,20 @@ def init_db():
     from backend.app.models.match_stream import MatchStream, StreamServer
 
     Base.metadata.create_all(bind=engine)
+
+    # SQLite lightweight column migration for added stream attributes
+    with engine.connect() as conn:
+        for col_def in [
+            "ALTER TABLE stream_servers ADD COLUMN referer VARCHAR(512)",
+            "ALTER TABLE stream_servers ADD COLUMN user_agent VARCHAR(512)",
+            "ALTER TABLE stream_servers ADD COLUMN priority_order INTEGER DEFAULT 0",
+        ]:
+            try:
+                conn.execute(text(col_def))
+                conn.commit()
+            except Exception:
+                pass
+
     logger.info("Database schema initialized.")
 
     # Seed default streams if empty

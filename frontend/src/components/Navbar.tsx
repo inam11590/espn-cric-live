@@ -1,5 +1,6 @@
 import React from 'react';
-import { Radio, Search, Tv, Filter, Wifi } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Radio, Search, Tv, Filter, Wifi, Shield } from 'lucide-react';
 
 interface NavbarProps {
   liveOnly: boolean;
@@ -109,7 +110,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
 
           {/* Search Box */}
-          <div className="relative flex-1 md:w-56">
+          <div className="relative flex-1 md:w-52">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
@@ -119,6 +120,16 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="w-full bg-slate-900/80 border border-slate-800 text-slate-200 text-xs rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/40 transition placeholder:text-slate-500"
             />
           </div>
+
+          {/* Admin Portal Button */}
+          <Link
+            to="/admin"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-emerald-400 text-xs font-semibold transition"
+            title="Admin Console"
+          >
+            <Shield className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">Admin</span>
+          </Link>
         </div>
       </div>
     </header>

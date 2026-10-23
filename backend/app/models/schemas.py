@@ -11,12 +11,75 @@ from pydantic import BaseModel, Field
 class StreamServerSchema(BaseModel):
     id: Optional[int] = None
     server_name: str = "HD Server 1"
-    stream_type: str = "hls"  # "hls" or "iframe"
+    stream_type: str = "hls"  # "hls", "proxy_hls", or "iframe"
     stream_url: str
+    referer: Optional[str] = None
+    user_agent: Optional[str] = None
     quality: str = "1080p"  # "1080p", "720p", "480p", "Auto"
     is_active: bool = True
+    priority_order: int = 0
 
     model_config = {"from_attributes": True}
+
+
+class StreamServerCreate(BaseModel):
+    server_name: str = "Main HD Feed"
+    stream_type: str = "hls"  # "hls", "proxy_hls", or "iframe"
+    stream_url: str
+    referer: Optional[str] = None
+    user_agent: Optional[str] = None
+    quality: str = "1080p"
+    is_active: bool = True
+    priority_order: int = 0
+
+
+class StreamServerUpdate(BaseModel):
+    server_name: Optional[str] = None
+    stream_type: Optional[str] = None
+    stream_url: Optional[str] = None
+    referer: Optional[str] = None
+    user_agent: Optional[str] = None
+    quality: Optional[str] = None
+    is_active: Optional[bool] = None
+    priority_order: Optional[int] = None
+
+
+class AdminLoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class AdminTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    username: str
+
+
+class StreamTestRequest(BaseModel):
+    stream_url: str
+    referer: Optional[str] = None
+    use_proxy: bool = False
+
+
+class StreamTestResponse(BaseModel):
+    success: bool
+    status_code: int
+    latency_ms: float
+    content_type: Optional[str] = None
+    is_valid_hls: bool = False
+    message: str = ""
+
+
+class CustomMatchCreate(BaseModel):
+    match_id: int
+    series_id: int
+    match_title: str
+    team_1_name: str
+    team_2_name: str
+    series_name: str = "Exhibition Series"
+    status: str = "LIVE"
+    status_text: str = "Live Stream Broadcast"
+
 
 
 class MatchStreamCreate(BaseModel):

@@ -30,19 +30,42 @@ class MatchStream(Base):
 
     @property
     def streams(self) -> List[Dict[str, Any]]:
-        """Returns clean list of server dicts for JSON output."""
-        return [
+        """Returns clean list of active server dicts for public JSON output."""
+        active = [
             {
                 "id": s.id,
                 "server_name": s.server_name,
                 "stream_type": s.stream_type,
                 "stream_url": s.stream_url,
+                "referer": s.referer,
+                "user_agent": s.user_agent,
                 "quality": s.quality,
                 "is_active": s.is_active,
+                "priority_order": s.priority_order or 0,
             }
             for s in self.servers
             if s.is_active
         ]
+        return sorted(active, key=lambda x: x["priority_order"])
+
+    @property
+    def all_streams(self) -> List[Dict[str, Any]]:
+        """Returns all server dicts (including inactive) for Admin panel."""
+        servers = [
+            {
+                "id": s.id,
+                "server_name": s.server_name,
+                "stream_type": s.stream_type,
+                "stream_url": s.stream_url,
+                "referer": s.referer,
+                "user_agent": s.user_agent,
+                "quality": s.quality,
+                "is_active": s.is_active,
+                "priority_order": s.priority_order or 0,
+            }
+            for s in self.servers
+        ]
+        return sorted(servers, key=lambda x: (not x["is_active"], x["priority_order"]))
 
 
 class StreamServer(Base):
@@ -51,10 +74,13 @@ class StreamServer(Base):
     id = Column(Integer, primary_key=True, index=True)
     match_stream_id = Column(Integer, ForeignKey("match_streams.id"), nullable=False)
     server_name = Column(String(100), nullable=False)  # "HD Server 1", "Backup Stream"
-    stream_type = Column(String(20), nullable=False, default="hls")  # "hls" or "iframe"
+    stream_type = Column(String(20), nullable=False, default="hls")  # "hls", "proxy_hls", or "iframe"
     stream_url = Column(String(1024), nullable=False)
+    referer = Column(String(512), nullable=True)
+    user_agent = Column(String(512), nullable=True)
     quality = Column(String(50), default="1080p")  # "1080p", "720p", "Auto"
     is_active = Column(Boolean, default=True)
+    priority_order = Column(Integer, default=0)
 
     created_at = Column(DateTime, default=datetime.utcnow)
 

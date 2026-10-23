@@ -1,12 +1,21 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { MatchSummary } from './types/cricket';
 import { useMatchSocket } from './hooks/useMatchSocket';
 import { Navbar } from './components/Navbar';
 import { MatchTicker } from './components/MatchTicker';
 import { MatchCenter } from './pages/MatchCenter';
 import { PlayerModal } from './components/PlayerModal';
+import { AdminLogin } from './pages/AdminLogin';
+import { AdminDashboard } from './pages/AdminDashboard';
 
-export const App: React.FC = () => {
+// -----------------------------------------------------------------------------
+// PUBLIC MATCH CENTER PAGE
+// -----------------------------------------------------------------------------
+const PublicMatchCenter: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const urlMatchId = searchParams.get('match') ? parseInt(searchParams.get('match')!) : null;
+
   const [matches, setMatches] = useState<MatchSummary[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<MatchSummary | null>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
@@ -26,10 +35,14 @@ export const App: React.FC = () => {
       const items: MatchSummary[] = data.matches || [];
       setMatches(items);
 
-      // Default selection on cold start
       setSelectedMatch((prev) => {
+        // If URL has ?match=... query, honor it
+        if (urlMatchId) {
+          const matchFromUrl = items.find((m) => m.match_id === urlMatchId);
+          if (matchFromUrl) return matchFromUrl;
+        }
+
         if (prev) {
-          // Keep current selection updated
           const updated = items.find((m) => m.match_id === prev.match_id);
           return updated || prev;
         }
@@ -46,7 +59,7 @@ export const App: React.FC = () => {
     fetchMatchesList();
     const interval = setInterval(fetchMatchesList, 20000);
     return () => clearInterval(interval);
-  }, []);
+  }, [urlMatchId]);
 
   // Real-time WebSocket hook for selected match
   const {
@@ -141,6 +154,22 @@ export const App: React.FC = () => {
         onClose={() => setSelectedPlayerId(null)}
       />
     </div>
+  );
+};
+
+// -----------------------------------------------------------------------------
+// MAIN APP ROUTER
+// -----------------------------------------------------------------------------
+export const App: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<PublicMatchCenter />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 };
 
