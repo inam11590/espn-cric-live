@@ -122,3 +122,51 @@ def test_admin_create_and_toggle_poll():
     )
     assert vote_res.status_code == 400
     assert "ended" in vote_res.json()["detail"].lower()
+
+
+def test_websocket_chat_and_rate_limiting():
+    with client.websocket_connect("/ws/chat/1478874/1478914") as ws:
+        msg1 = ws.receive_json()
+        assert msg1["type"] == "chat_history"
+        msg2 = ws.receive_json()
+        assert msg2["type"] == "viewer_count"
+
+        # Send valid message
+        ws.send_json({
+            "type": "chat_message",
+            "message": "Super cover drive by Kohli!",
+            "username": "CoverDrive_77",
+            "user_id": "test_user_unique_ws_1",
+        })
+        chat_res = ws.receive_json()
+        assert chat_res["type"] == "chat_message"
+        assert "Super cover drive" in chat_res["message"]
+
+        # Send second message immediately with same user_id (should be rate-limited)
+        ws.send_json({
+            "type": "chat_message",
+            "message": "Spam spam!",
+            "username": "CoverDrive_77",
+            "user_id": "test_user_unique_ws_1",
+        })
+        rl_res = ws.receive_json()
+        assert rl_res["type"] == "error"
+        assert rl_res["code"] == "RATE_LIMITED"
+
+
+def test_websocket_reaction_broadcast():
+    with client.websocket_connect("/ws/chat/1478874/1478914") as ws:
+        ws.receive_json()  # history
+        ws.receive_json()  # viewer count
+
+        # Send reaction
+        ws.send_json({
+            "type": "reaction",
+            "emoji": "🔥",
+            "username": "YorkerKing_99",
+        })
+        rx_res = ws.receive_json()
+        assert rx_res["type"] == "reaction"
+        assert rx_res["emoji"] == "🔥"
+        assert rx_res["sender"] == "YorkerKing_99"
+
